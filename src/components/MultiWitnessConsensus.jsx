@@ -41,19 +41,45 @@ const MultiWitnessConsensus = ({ witnesses, apiKey, returnPhase }) => {
       const agreedPrompt = agreed.map(t => `${t.key}: ${t.value}`).join(', ');
       const dissimilarPrompt = dissimilar.map(t => `${t.key}: blend of ${t.values.join(' and ')}`).join(', ');
       
+      const imageParts = confirmedWitnesses.map(w => {
+        const matchedCand = w.candidates.find(c => c.id === w.selectedCandidate);
+        if (matchedCand?.image && matchedCand.image.startsWith('data:')) {
+          const [header, base64Data] = matchedCand.image.split(',');
+          const mimeType = header.split(':')[1].split(';')[0];
+          return {
+            inlineData: { mimeType, data: base64Data }
+          };
+        }
+        return null;
+      }).filter(Boolean);
+
+      const genderVal = agreed.find(t => t.key === 'gender')?.value || 
+                        dissimilar.find(t => t.key === 'gender')?.values[0] || 
+                        'person';
+      const isFemale = genderVal.toLowerCase().includes('female') || genderVal.toLowerCase().includes('woman');
+      const genderAnchor = isFemale ? "A detailed forensic police portrait of a woman" : "A detailed forensic police portrait of a man";
+
       const fusionPrompt = [
-        agreed.length > 0 ? `Agreed features: ${agreedPrompt}` : '',
-        dissimilar.length > 0 ? `Conflicting features (reconcile into a blend): ${dissimilarPrompt}` : ''
+        `FUSE and MERGE the provided images into a single consensus forensic composite. Subject MUST be ${isFemale ? 'FEMALE' : 'MALE'}.`,
+        genderAnchor,
+        agreed.length > 0 ? `ENSURE these shared features are definitive: ${agreedPrompt}` : '',
+        dissimilar.length > 0 ? `RECONCILE these discrepancies into a natural blend: ${dissimilarPrompt}` : ''
       ].filter(Boolean).join('. ');
-      const styleExt = "tightly cropped single-subject headshot, photorealistic high quality photography, looking straight at camera, neutral background, forensic composite style, studio lighting, NO frames, NO borders";
-      const fullPrompt = `${fusionPrompt}, ${styleExt}`;
+
+      const styleExt = "tightly cropped single-subject headshot, photorealistic absolute high quality photography, looking straight at camera, neutral background, forensic composite style, studio lighting, NO frames, NO borders";
+      const fullPrompt = `${fusionPrompt}. Style: ${styleExt}`;
 
       try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: fullPrompt }] }],
+            contents: [{ 
+              parts: [
+                { text: fullPrompt },
+                ...imageParts
+              ] 
+            }],
             generationConfig: { responseModalities: ["IMAGE"] }
           })
         });

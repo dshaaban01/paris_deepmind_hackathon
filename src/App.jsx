@@ -5,7 +5,7 @@ import MultiWitnessConsensus from './components/MultiWitnessConsensus';
 
 function App() {
   const [currentPhase, setCurrentPhase] = useState('interview'); // interview, candidates, consensus
-  const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || 'AIzaSyBlFj-tVAsyE6CUYrKkZh8pV0vSTL5oNW4');
+  const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '');
   const [activeWitnessId, setActiveWitnessId] = useState('A');
   
   const initialWitness = (id) => ({
@@ -31,6 +31,14 @@ function App() {
     setWitnesses(prev => prev.map(w => w.id === id ? { ...w, ...newData } : w));
   };
 
+  const addWitness = () => {
+    const nextLabel = String.fromCharCode(65 + witnesses.length); // A, B, C...
+    const newW = initialWitness(nextLabel);
+    setWitnesses(prev => [...prev, newW]);
+    setActiveWitnessId(nextLabel);
+    setCurrentPhase('interview');
+  };
+
   const handleKeyChange = (e) => {
     const val = e.target.value;
     setApiKey(val);
@@ -49,7 +57,7 @@ function App() {
                   key={w.id}
                   onClick={() => {
                     setActiveWitnessId(w.id);
-                    if (currentPhase === 'consensus') {
+                    if (currentPhase === 'candidates' || currentPhase === 'consensus') {
                       setCurrentPhase('interview');
                     }
                   }}
@@ -67,6 +75,26 @@ function App() {
                   {w.name} {w.selectedCandidate ? '✅' : ''}
                 </button>
               ))}
+              <button 
+                onClick={addWitness}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px dashed var(--surface-border)',
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'var(--text-secondary)',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontSize: '1.1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s ease'
+                }}
+                title="Add Witness"
+              >
+                +
+              </button>
             </div>
 
             <div style={{ width: '1px', height: '24px', background: 'var(--surface-border)' }}></div>

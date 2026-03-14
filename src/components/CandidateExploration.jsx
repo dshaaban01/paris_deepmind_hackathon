@@ -21,8 +21,12 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
 
   // Build the prompt using confidence to adjust adjectives
   const getPromptWithConfidence = () => {
-    return Object.entries(traits)
-      .filter(([key]) => key !== 'unidentified_features')
+    const genderTrait = traits.gender?.value?.toLowerCase() || 'person';
+    const isFemale = genderTrait.includes('female') || genderTrait.includes('woman');
+    const genderAnchor = isFemale ? "A detailed forensic police portrait of a woman" : "A detailed forensic police portrait of a man";
+
+    const features = Object.entries(traits)
+      .filter(([key]) => key !== 'unidentified_features' && key !== 'gender')
       .map(([key, trait]) => {
         const val = trait.value;
         const conf = trait.confidence;
@@ -32,6 +36,8 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
         return val;
       })
       .join(', ');
+      
+    return `${genderAnchor}, ${features}`;
   };
     
   const basePrompt = getPromptWithConfidence();
