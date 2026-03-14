@@ -1,16 +1,45 @@
-# React + Vite
+# ShareLock (Paris DeepMind Hackathon)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AI-assisted witness interview and suspect sketch exploration built with React + Vite.
 
-Currently, two official plugins are available:
+## 1) Environment setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Create a local environment file:
 
-## React Compiler
+```bash
+cp .env.example .env
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Then set your Gemini API key in `.env`:
 
-## Expanding the ESLint configuration
+```env
+VITE_GEMINI_API_KEY=your_gemini_api_key_here
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Notes:
+- Vite only exposes variables prefixed with `VITE_` to frontend code.
+- The app can also store/update the key in browser `localStorage` (`gemini_api_key`).
+
+## 2) Install and run
+
+```bash
+npm install
+npm run dev
+```
+
+Open the local URL shown in terminal (typically `http://localhost:5173`).
+
+## 3) How to use the app
+
+1. Choose a witness (A/B/...) in the header.
+2. **Interview**: collect witness description and structured traits.
+3. **Refinement**: generate and iterate candidate suspect images.
+4. Repeat for other witnesses.
+5. **Consensus**: combine witness outcomes into a final result.
+
+## Available scripts
+
+- `npm run dev` — start development server
+- `npm run build` — create production build
+- `npm run preview` — preview production build locally
+- `npm run lint` — run ESLint

@@ -11,7 +11,7 @@ const MultiWitnessConsensus = ({ witnesses, apiKey, returnPhase }) => {
   useEffect(() => {
     const doFusion = async () => {
       setIsMerging(true);
-      
+
       // Analyze traits for agreement vs discrepancy
       const traitsSummary = {}; // key -> { values: Set, list: [] }
       confirmedWitnesses.forEach(w => {
@@ -40,7 +40,7 @@ const MultiWitnessConsensus = ({ witnesses, apiKey, returnPhase }) => {
       // Construct advanced prompt
       const agreedPrompt = agreed.map(t => `${t.key}: ${t.value}`).join(', ');
       const dissimilarPrompt = dissimilar.map(t => `${t.key}: blend of ${t.values.join(' and ')}`).join(', ');
-      
+
       const imageParts = confirmedWitnesses.map(w => {
         const matchedCand = w.candidates.find(c => c.id === w.selectedCandidate);
         if (matchedCand?.image && matchedCand.image.startsWith('data:')) {
@@ -53,20 +53,21 @@ const MultiWitnessConsensus = ({ witnesses, apiKey, returnPhase }) => {
         return null;
       }).filter(Boolean);
 
-      const genderVal = agreed.find(t => t.key === 'gender')?.value || 
-                        dissimilar.find(t => t.key === 'gender')?.values[0] || 
+      const genderVal = agreed.find(t => t.key === 'gender')?.value ||
+                        dissimilar.find(t => t.key === 'gender')?.values[0] ||
                         'person';
       const isFemale = genderVal.toLowerCase().includes('female') || genderVal.toLowerCase().includes('woman');
-      const genderAnchor = isFemale ? "A detailed forensic police portrait of a woman" : "A detailed forensic police portrait of a man";
+      const genderAnchor = isFemale ? "A passport-style identification portrait of a woman" : "A passport-style identification portrait of a man";
 
       const fusionPrompt = [
         `FUSE and MERGE the provided images into a single consensus forensic composite. Subject MUST be ${isFemale ? 'FEMALE' : 'MALE'}.`,
         genderAnchor,
         agreed.length > 0 ? `ENSURE these shared features are definitive: ${agreedPrompt}` : '',
-        dissimilar.length > 0 ? `RECONCILE these discrepancies into a natural blend: ${dissimilarPrompt}` : ''
+        dissimilar.length > 0 ? `RECONCILE these discrepancies into a natural blend: ${dissimilarPrompt}` : '',
+        'Output must be a clean centered ID-style portrait with no text overlays or markings.'
       ].filter(Boolean).join('. ');
 
-      const styleExt = "tightly cropped single-subject headshot, photorealistic absolute high quality photography, looking straight at camera, neutral background, forensic composite style, studio lighting, NO frames, NO borders";
+      const styleExt = "single-subject passport photo style, face centered and straight to camera, head and upper shoulders visible, neutral plain background, balanced framing, photorealistic absolute high quality, consistent lighting, no dramatic shadows, NO text, NO numbers, NO logos, NO watermark, NO frames, NO borders";
       const fullPrompt = `${fusionPrompt}. Style: ${styleExt}`;
 
       try {
@@ -74,11 +75,11 @@ const MultiWitnessConsensus = ({ witnesses, apiKey, returnPhase }) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ 
+            contents: [{
               parts: [
                 { text: `${fullPrompt}. Consensus Variant ID: ${Math.random().toString(36).substring(7)}` },
                 ...imageParts
-              ] 
+              ]
             }],
             generationConfig: { responseModalities: ["IMAGE"] }
           })
@@ -110,7 +111,7 @@ const MultiWitnessConsensus = ({ witnesses, apiKey, returnPhase }) => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'start' }}>
-        
+
         {/* Left Side: Witnesses */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <h3 style={{ borderBottom: '1px solid var(--surface-border)', paddingBottom: '8px' }}>Individual Witness Matches</h3>
@@ -144,27 +145,24 @@ const MultiWitnessConsensus = ({ witnesses, apiKey, returnPhase }) => {
             </div>
           ) : (
             <div className="animate-fade-in" style={{ textAlign: 'center', width: '100%' }}>
-              <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: 'var(--success)', padding: '6px 16px', borderLeft: '4px solid var(--success)', borderRadius: '4px 16px 16px 4px', fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>
-                CONSENSUS TARGET GENERATED
-              </div>
-              <div 
+              <div
                 className="glow-active"
-                style={{ 
-                  width: '100%', 
-                  maxWidth: '320px', 
-                  aspectRatio: '1/1', 
-                  background: '#000', 
-                  borderRadius: '24px', 
-                  overflow: 'hidden', 
-                  margin: '0 auto 32px', 
-                  boxShadow: '0 0 50px rgba(59, 130, 246, 0.3)', 
-                  border: '2px solid rgba(59, 130, 246, 0.6)' 
+                style={{
+                  width: '100%',
+                  maxWidth: '320px',
+                  aspectRatio: '1/1',
+                  background: '#000',
+                  borderRadius: '24px',
+                  overflow: 'hidden',
+                  margin: '0 auto 32px',
+                  boxShadow: '0 0 50px rgba(59, 130, 246, 0.3)',
+                  border: '2px solid rgba(59, 130, 246, 0.6)'
                 }}
               >
                 <img src={consensusImage || "/placeholder_composite.png"} alt="Consensus Target" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <h2 style={{ marginBottom: '12px', fontSize: '2.2rem', letterSpacing: '-0.02em' }}>Target ID: 24-Alpha</h2>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '32px', textAlign: 'left' }}>
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '16px', border: '1px solid var(--surface-border)' }}>
                   <h4 style={{ color: 'var(--success)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -201,7 +199,7 @@ const MultiWitnessConsensus = ({ witnesses, apiKey, returnPhase }) => {
         </div>
 
       </div>
-      
+
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
