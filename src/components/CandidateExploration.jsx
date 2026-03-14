@@ -1,10 +1,58 @@
 import { useState, useEffect } from 'react';
+import { parseTraits } from '../utils/parser';
 
 const initialGenerationLocks = new Set();
 const CONFIDENCE_LEVELS = {
   low: { label: 'Not so confident', value: 0.45 },
   mid: { label: 'Middle', value: 0.75 },
   high: { label: 'Very confident', value: 0.92 }
+};
+
+const CORE_TRAITS = ['gender', 'age', 'hair', 'eyes', 'face_shape', 'nose_shape', 'skin_tone'];
+
+const TRAIT_LABELS = {
+  gender: 'Gender',
+  age: 'Age',
+  hair: 'Hair',
+  eyes: 'Eyes',
+  face_shape: 'Face shape',
+  nose_shape: 'Nose shape',
+  skin_tone: 'Skin tone'
+};
+
+const CONTRADICTION_RULES = [
+  {
+    label: 'Eye color',
+    patterns: [
+      { label: 'blue', regex: /\bblue\s+eyes\b/i },
+      { label: 'brown', regex: /\bbrown\s+eyes\b/i },
+      { label: 'green', regex: /\bgreen\s+eyes\b/i },
+      { label: 'hazel', regex: /\bhazel\s+eyes\b/i },
+      { label: 'gray', regex: /\b(?:gray|grey)\s+eyes\b/i }
+    ]
+  },
+  {
+    label: 'Hair color',
+    patterns: [
+      { label: 'black', regex: /\bblack\s+hair\b/i },
+      { label: 'brown', regex: /\bbrown\s+hair\b/i },
+      { label: 'blonde', regex: /\bblonde\s+hair\b/i },
+      { label: 'red', regex: /\b(?:red|ginger)\s+hair\b/i },
+      { label: 'gray', regex: /\b(?:gray|grey|white|silver)\s+hair\b/i }
+    ]
+  }
+];
+
+const findContradictions = (description = '') => {
+  if (!description.trim()) return [];
+
+  return CONTRADICTION_RULES.map(rule => {
+    const matched = rule.patterns.filter(p => p.regex.test(description)).map(p => p.label);
+    if (matched.length > 1) {
+      return `${rule.label}: ${matched.join(' vs ')}`;
+    }
+    return null;
+  }).filter(Boolean);
 };
 
 const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataChange }) => {
@@ -25,12 +73,12 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
   const isFemale = traits.gender?.value === 'female';
 
   // Build the prompt using confidence to adjust adjectives
-  const getPromptWithConfidence = () => {
-    const genderTrait = traits.gender?.value?.toLowerCase() || 'person';
+  const getPromptWithConfidence = (sourceTraits = traits) => {
+    const genderTrait = sourceTraits.gender?.value?.toLowerCase() || 'person';
     const isFemale = genderTrait.includes('female') || genderTrait.includes('woman');
     const genderAnchor = isFemale ? "A passport-style identification portrait of a woman" : "A passport-style identification portrait of a man";
 
-    const features = Object.entries(traits)
+    const features = Object.entries(sourceTraits)
       .filter(([key]) => key !== 'unidentified_features' && key !== 'gender')
       .map(([, trait]) => {
         const val = trait.value;
@@ -50,6 +98,29 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
   const lowConfidenceTraits = Object.entries(traits)
     .filter(([, t]) => t.confidence < 0.6)
     .map(([key]) => key.replaceAll('_', ' '));
+  const mediumConfidenceTraits = Object.entries(traits)
+    .filter(([, t]) => t.confidence >= 0.6 && t.confidence < 0.8)
+    .map(([key]) => key.replaceAll('_', ' '));
+
+  const missingCoreTraits = CORE_TRAITS.filter(key => !traits[key]).map(key => TRAIT_LABELS[key]);
+  const contradictions = findContradictions(data.faceDescription || '');
+  const coverageRatio = (CORE_TRAITS.length - missingCoreTraits.length) / CORE_TRAITS.length;
+  const confidenceValues = Object.values(traits).map(t => t.confidence).filter(Number.isFinite);
+  const avgConfidence = confidenceValues.length
+    ? confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length
+    : 0;
+  const caseCompletenessScore = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round((coverageRatio * 65) + (avgConfidence * 35) - (contradictions.length * 12))
+    )
+  );
+  const scoreTone = caseCompletenessScore >= 75
+    ? 'var(--success)'
+    : caseCompletenessScore >= 45
+      ? 'var(--warning)'
+      : 'var(--danger)';
 
   const needsClarification = lowConfidenceTraits.length > 0;
   const hasPendingConfidenceSelection = Object.values(confidenceSelections).some(Boolean);
@@ -166,11 +237,24 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
     doGeneration(basePrompt, 1, { lockKey });
   }, [apiKey, candidates.length, isGenerating, basePrompt, data.id]);
 
-  const handleRefine = () => {
+  const handleRefine = async () => {
     if (!selectedCandidate || !apiKey) return;
 
     const typedRefinement = refinementInput.trim();
-    const { updatedTraits, hasSelection, summary } = applyConfidenceSelections(data.structuredTraits || {});
+    const currentTraits = data.structuredTraits || {};
+
+    let parsedTraits = {};
+    if (typedRefinement) {
+      const parsed = await parseTraits(typedRefinement, apiKey, currentTraits);
+      parsedTraits = parsed?.traits || {};
+    }
+
+    const mergedTraits = {
+      ...currentTraits,
+      ...parsedTraits
+    };
+
+    const { updatedTraits, hasSelection, summary } = applyConfidenceSelections(mergedTraits);
     if (!typedRefinement && !hasSelection) return;
 
     const baseCand = candidates.find(c => c.id === selectedCandidate);
@@ -241,6 +325,40 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
             </span>
           )}
         </div>
+        </div>
+      </div>
+
+      <div className="glass-panel" style={{ padding: '16px', borderRadius: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+          <h3 style={{ margin: 0, fontSize: '1.02rem' }}>Case Completeness</h3>
+          <span style={{ color: scoreTone, fontWeight: '800' }}>{caseCompletenessScore}%</span>
+        </div>
+        <div style={{ height: '9px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: '10px' }}>
+          <div style={{ width: `${caseCompletenessScore}%`, height: '100%', background: `linear-gradient(90deg, ${scoreTone}, rgba(255,255,255,0.85))`, transition: 'width 0.35s ease' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--surface-border)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '6px' }}>Missing Traits</div>
+            <div style={{ fontSize: '0.85rem', color: missingCoreTraits.length ? 'var(--warning)' : 'var(--success)' }}>
+              {missingCoreTraits.length ? missingCoreTraits.slice(0, 3).join(', ') + (missingCoreTraits.length > 3 ? '…' : '') : 'None'}
+            </div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--surface-border)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '6px' }}>Confidence Gaps</div>
+            <div style={{ fontSize: '0.85rem', color: (lowConfidenceTraits.length || mediumConfidenceTraits.length) ? 'var(--warning)' : 'var(--success)' }}>
+              {lowConfidenceTraits.length
+                ? `Low: ${lowConfidenceTraits.slice(0, 2).join(', ')}${lowConfidenceTraits.length > 2 ? '…' : ''}`
+                : mediumConfidenceTraits.length
+                  ? `Mid: ${mediumConfidenceTraits.slice(0, 2).join(', ')}${mediumConfidenceTraits.length > 2 ? '…' : ''}`
+                  : 'Strong'}
+            </div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--surface-border)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '6px' }}>Potential Contradictions</div>
+            <div style={{ fontSize: '0.85rem', color: contradictions.length ? 'var(--warning)' : 'var(--success)' }}>
+              {contradictions.length ? contradictions[0] : 'None detected'}
+            </div>
+          </div>
         </div>
       </div>
 

@@ -7,6 +7,67 @@ const CONFIDENCE_LEVELS = {
   high: { label: 'Very confident', value: 0.92 }
 };
 
+const CORE_TRAITS = ['gender', 'age', 'hair', 'eyes', 'face_shape', 'nose_shape', 'skin_tone'];
+
+const TRAIT_LABELS = {
+  gender: 'Gender',
+  age: 'Age',
+  hair: 'Hair',
+  eyes: 'Eyes',
+  face_shape: 'Face shape',
+  nose_shape: 'Nose shape',
+  skin_tone: 'Skin tone',
+  facial_hair: 'Facial hair'
+};
+
+const CONTRADICTION_RULES = [
+  {
+    key: 'eye_color',
+    label: 'Eye color',
+    patterns: [
+      { label: 'blue', regex: /\bblue\s+eyes\b/i },
+      { label: 'brown', regex: /\bbrown\s+eyes\b/i },
+      { label: 'green', regex: /\bgreen\s+eyes\b/i },
+      { label: 'hazel', regex: /\bhazel\s+eyes\b/i },
+      { label: 'gray', regex: /\b(?:gray|grey)\s+eyes\b/i }
+    ]
+  },
+  {
+    key: 'hair_color',
+    label: 'Hair color',
+    patterns: [
+      { label: 'black', regex: /\bblack\s+hair\b/i },
+      { label: 'brown', regex: /\bbrown\s+hair\b/i },
+      { label: 'blonde', regex: /\bblonde\s+hair\b/i },
+      { label: 'red', regex: /\b(?:red|ginger)\s+hair\b/i },
+      { label: 'gray', regex: /\b(?:gray|grey|white|silver)\s+hair\b/i }
+    ]
+  },
+  {
+    key: 'gender',
+    label: 'Gender',
+    patterns: [
+      { label: 'male', regex: /\b(man|male|boy|guy|he|his|him)\b/i },
+      { label: 'female', regex: /\b(woman|female|girl|lady|she|her)\b/i }
+    ]
+  }
+];
+
+const findContradictions = (description = '') => {
+  if (!description.trim()) return [];
+
+  return CONTRADICTION_RULES.map(rule => {
+    const matched = rule.patterns
+      .filter(p => p.regex.test(description))
+      .map(p => p.label);
+
+    if (matched.length > 1) {
+      return `${rule.label}: ${matched.join(' vs ')}`;
+    }
+    return null;
+  }).filter(Boolean);
+};
+
 const WitnessInterview = ({ advancePhase, onDataChange, data, apiKey }) => {
   const messages = data.messages || [];
   const uploadedImage = data.sourceImage || null;
@@ -21,9 +82,21 @@ const WitnessInterview = ({ advancePhase, onDataChange, data, apiKey }) => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
+        const uploadUserMessage = {
+          id: Date.now(),
+          text: `📷 Picture added (${file.name}).`,
+          sender: 'user'
+        };
+
+        const uploadAiMessage = {
+          id: Date.now() + 1,
+          text: '✅ Picture added and analyzed. I will use it as visual context while building the forensic profile.',
+          sender: 'ai'
+        };
+
         onDataChange({
           sourceImage: reader.result,
-          messages: [...messages, { id: Date.now(), text: `[Image Attached: ${file.name}]`, sender: 'user' }]
+          messages: [...messages, uploadUserMessage, uploadAiMessage]
         });
       };
       reader.readAsDataURL(file);
@@ -71,6 +144,30 @@ const WitnessInterview = ({ advancePhase, onDataChange, data, apiKey }) => {
   const lowConfidenceTraits = Object.entries(traits)
     .filter(([, t]) => t.confidence < 0.6)
     .map(([key]) => key.replaceAll('_', ' '));
+  const mediumConfidenceTraits = Object.entries(traits)
+    .filter(([, t]) => t.confidence >= 0.6 && t.confidence < 0.8)
+    .map(([key]) => key.replaceAll('_', ' '));
+
+  const missingCoreTraits = CORE_TRAITS.filter(key => !traits[key]).map(key => TRAIT_LABELS[key]);
+  const contradictions = findContradictions(data.faceDescription || '');
+  const coverageRatio = (CORE_TRAITS.length - missingCoreTraits.length) / CORE_TRAITS.length;
+  const confidenceValues = Object.values(traits).map(trait => trait.confidence).filter(Number.isFinite);
+  const avgConfidence = confidenceValues.length > 0
+    ? confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length
+    : 0;
+  const caseCompletenessScore = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round((coverageRatio * 65) + (avgConfidence * 35) - (contradictions.length * 12))
+    )
+  );
+
+  const scoreTone = caseCompletenessScore >= 75
+    ? 'var(--success)'
+    : caseCompletenessScore >= 45
+      ? 'var(--warning)'
+      : 'var(--danger)';
 
   const getConfidenceLevel = (confidence) => {
     if (confidence >= 0.9) return 'high';
@@ -88,6 +185,43 @@ const WitnessInterview = ({ advancePhase, onDataChange, data, apiKey }) => {
         <p style={{ color: 'var(--text-secondary)', marginTop: '2px', maxWidth: '640px', fontSize: '0.98rem' }}>
           Please describe the subject in natural language.
         </p>
+      </div>
+
+      <div className="glass-panel" style={{ padding: '18px', borderRadius: '16px', marginBottom: '18px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+          <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Case Completeness</h3>
+          <span style={{ color: scoreTone, fontWeight: '800', fontSize: '1rem' }}>{caseCompletenessScore}%</span>
+        </div>
+        <div style={{ height: '10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: '12px' }}>
+          <div style={{ width: `${caseCompletenessScore}%`, height: '100%', background: `linear-gradient(90deg, ${scoreTone}, rgba(255,255,255,0.85))`, transition: 'width 0.35s ease' }} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--surface-border)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)', marginBottom: '6px' }}>Missing Traits</div>
+            <div style={{ fontSize: '0.86rem', color: missingCoreTraits.length ? 'var(--warning)' : 'var(--success)' }}>
+              {missingCoreTraits.length ? missingCoreTraits.slice(0, 3).join(', ') + (missingCoreTraits.length > 3 ? '…' : '') : 'None'}
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--surface-border)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)', marginBottom: '6px' }}>Confidence Gaps</div>
+            <div style={{ fontSize: '0.86rem', color: (lowConfidenceTraits.length || mediumConfidenceTraits.length) ? 'var(--warning)' : 'var(--success)' }}>
+              {lowConfidenceTraits.length
+                ? `Low: ${lowConfidenceTraits.slice(0, 2).join(', ')}${lowConfidenceTraits.length > 2 ? '…' : ''}`
+                : mediumConfidenceTraits.length
+                  ? `Mid: ${mediumConfidenceTraits.slice(0, 2).join(', ')}${mediumConfidenceTraits.length > 2 ? '…' : ''}`
+                  : 'Strong'}
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--surface-border)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)', marginBottom: '6px' }}>Potential Contradictions</div>
+            <div style={{ fontSize: '0.86rem', color: contradictions.length ? 'var(--warning)' : 'var(--success)' }}>
+              {contradictions.length ? contradictions[0] : 'None detected'}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Chat Area */}
