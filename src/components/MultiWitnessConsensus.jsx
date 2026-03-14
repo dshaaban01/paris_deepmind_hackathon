@@ -76,7 +76,7 @@ const MultiWitnessConsensus = ({ witnesses, apiKey, returnPhase }) => {
           body: JSON.stringify({
             contents: [{ 
               parts: [
-                { text: fullPrompt },
+                { text: `${fullPrompt}. Consensus Variant ID: ${Math.random().toString(36).substring(7)}` },
                 ...imageParts
               ] 
             }],
@@ -144,39 +144,58 @@ const MultiWitnessConsensus = ({ witnesses, apiKey, returnPhase }) => {
             </div>
           ) : (
             <div className="animate-fade-in" style={{ textAlign: 'center', width: '100%' }}>
-              <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)', padding: '6px 12px', borderRadius: '16px', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                Consensus Target Generated
+              <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: 'var(--success)', padding: '6px 16px', borderLeft: '4px solid var(--success)', borderRadius: '4px 16px 16px 4px', fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+                CONSENSUS TARGET GENERATED
               </div>
-              <div style={{ width: '100%', maxWidth: '300px', aspectRatio: '1/1', background: '#000', borderRadius: '12px', overflow: 'hidden', margin: '0 auto 24px', boxShadow: '0 0 40px rgba(59, 130, 246, 0.4)', border: '2px solid var(--primary)' }}>
+              <div 
+                className="glow-active"
+                style={{ 
+                  width: '100%', 
+                  maxWidth: '320px', 
+                  aspectRatio: '1/1', 
+                  background: '#000', 
+                  borderRadius: '24px', 
+                  overflow: 'hidden', 
+                  margin: '0 auto 32px', 
+                  boxShadow: '0 0 50px rgba(59, 130, 246, 0.3)', 
+                  border: '2px solid rgba(59, 130, 246, 0.6)' 
+                }}
+              >
                 <img src={consensusImage || "/placeholder_composite.png"} alt="Consensus Target" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
-              <h2 style={{ marginBottom: '8px' }}>Target ID: 24-Alpha</h2>
+              <h2 style={{ marginBottom: '12px', fontSize: '2.2rem', letterSpacing: '-0.02em' }}>Target ID: 24-Alpha</h2>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '24px', textAlign: 'left' }}>
-                <div>
-                  <h4 style={{ color: 'var(--success)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>✓ Shared Consensus</h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '32px', textAlign: 'left' }}>
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '16px', border: '1px solid var(--surface-border)' }}>
+                  <h4 style={{ color: 'var(--success)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>✨</span> Shared Consensus
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                     {agreedTraits.length > 0 ? agreedTraits.map((t, idx) => (
-                      <span key={idx} style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>
-                        {t.key}: <b>{t.value}</b>
+                      <span key={idx} style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem' }}>
+                        {t.key}: <b style={{ color: '#fff' }}>{t.value}</b>
                       </span>
-                    )) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>No perfect shared matches.</span>}
+                    )) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>No perfect shared matches.</span>}
                   </div>
                 </div>
 
-                <div>
-                  <h4 style={{ color: 'var(--warning)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>⚠ Dissimilar Traits</h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '16px', border: '1px solid var(--surface-border)' }}>
+                  <h4 style={{ color: 'var(--warning)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>⚖️</span> Dissimilar Traits
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                     {dissimilarTraits.length > 0 ? dissimilarTraits.map((t, idx) => (
-                      <span key={idx} style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem' }}>
-                        {t.key}: <b>{t.values.join(' / ')}</b>
+                      <span key={idx} style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem' }}>
+                        {t.key}: <b style={{ color: '#fff' }}>{t.values.join(' / ')}</b>
                       </span>
-                    )) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>No major discrepancies.</span>}
+                    )) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>No major discrepancies.</span>}
                   </div>
                 </div>
               </div>
 
-              <button className="btn btn-primary" style={{ marginTop: '32px', width: '100%' }}>Export Case Lead</button>
+              <button className="btn btn-primary glow-active" style={{ marginTop: '40px', width: '100%', height: '50px', fontSize: '1.1rem' }}>
+                🚀 Export Case Lead & Close Investigation
+              </button>
             </div>
           )}
         </div>

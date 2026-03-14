@@ -76,24 +76,42 @@ const WitnessInterview = ({ advancePhase, onDataChange, data, apiKey }) => {
       {/* Chat Area */}
       <div ref={scrollRef} style={{ flex: '1 1 400px', minHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', paddingRight: '12px', marginBottom: '8px' }}>
         {messages.map(msg => (
-          <div key={msg.id} style={{ 
-            alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-            maxWidth: '95%',
-            background: msg.sender === 'user' ? 'var(--primary)' : 'rgba(255, 255, 255, 0.12)',
-            border: msg.sender === 'ai' ? '1px solid rgba(255, 255, 255, 0.2)' : 'none',
-            padding: '14px 18px',
-            borderRadius: msg.sender === 'user' ? '18px 18px 0 18px' : '18px 18px 18px 0',
-            color: 'white',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-          }}>
-            {msg.text}
+          <div 
+            key={msg.id} 
+            style={{ 
+              alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+              maxWidth: '85%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start'
+            }}
+          >
+            <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginLeft: msg.sender === 'ai' ? '12px' : '0', marginRight: msg.sender === 'ai' ? '0' : '12px' }}>
+              {msg.sender === 'ai' ? '🤖 Forensic Artist' : '👤 Witness'}
+            </span>
+            <div style={{ 
+              padding: '14px 20px', 
+              borderRadius: msg.sender === 'ai' ? '4px 20px 20px 20px' : '20px 4px 20px 20px',
+              background: msg.sender === 'ai' 
+                ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.05) 100%)' 
+                : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${msg.sender === 'ai' ? 'rgba(59, 130, 246, 0.3)' : 'var(--surface-border)'}`,
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+              color: '#fff',
+              lineHeight: '1.5',
+              fontSize: '0.95rem'
+            }}>
+              {msg.text}
+            </div>
           </div>
         ))}
         {isTyping && (
-          <div className="animate-pulse" style={{ alignSelf: 'flex-start', background: 'rgba(255, 255, 255, 0.05)', padding: '12px 16px', borderRadius: '16px 16px 16px 0', border: '1px solid var(--surface-border)' }}>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', background: 'var(--text-secondary)', borderRadius: '50%', marginRight: '4px' }}></span>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', background: 'var(--text-secondary)', borderRadius: '50%', marginRight: '4px' }}></span>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', background: 'var(--text-secondary)', borderRadius: '50%' }}></span>
+          <div className="animate-pulse" style={{ alignSelf: 'flex-start', background: 'rgba(255, 255, 255, 0.03)', padding: '12px 20px', borderRadius: '4px 16px 16px 16px', border: '1px solid var(--surface-border)', display: 'flex', gap: '4px', marginLeft: '12px' }}>
+            <span style={{ display: 'inline-block', width: '6px', height: '6px', background: 'var(--accent-blue)', borderRadius: '50%' }}></span>
+            <span style={{ display: 'inline-block', width: '6px', height: '6px', background: 'var(--accent-blue)', borderRadius: '50%' }}></span>
+            <span style={{ display: 'inline-block', width: '6px', height: '6px', background: 'var(--accent-blue)', borderRadius: '50%' }}></span>
           </div>
         )}
       </div>
@@ -136,33 +154,47 @@ const WitnessInterview = ({ advancePhase, onDataChange, data, apiKey }) => {
       {/* Schema Live View & Actions */}
       {Object.keys(data.structuredTraits).length > 0 && (
         <div className="animate-fade-in" style={{ 
-          marginTop: '24px', 
-          background: 'rgba(0,0,0,0.3)', 
-          padding: '16px', 
-          borderRadius: '12px', 
-          border: '1px solid rgba(16, 185, 129, 0.2)',
+          marginTop: '32px', 
+          background: 'rgba(0,0,0,0.4)', 
+          padding: '24px', 
+          borderRadius: 'var(--radius-lg)', 
+          border: '1px solid var(--surface-border)',
           maxHeight: '400px',
-          overflowY: 'auto'
+          overflowY: 'auto',
+          boxShadow: 'inset 0 0 20px rgba(0,0,0,0.2)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', minHeight: '64px' }}>
-            <h4 style={{ color: 'var(--success)', margin: 0, paddingTop: '8px' }}>Extracted Structured Schema</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div>
+              <h4 style={{ color: 'var(--accent-blue)', margin: 0, fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Forensic Profile</h4>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>Real-time trait synchronization active</p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
               <button 
-                className="btn btn-primary" 
+                className={`btn btn-primary ${(!needsClarification && Object.keys(traits).length > 0) ? 'glow-active' : ''}`}
                 onClick={advancePhase}
                 disabled={Object.keys(traits).length === 0 || needsClarification}
                 style={{ 
-                  opacity: (Object.keys(traits).length > 0 && !needsClarification) ? 1 : 0.5,
-                  minWidth: '180px',
-                  height: '40px'
+                  opacity: (Object.keys(traits).length > 0 && !needsClarification) ? 1 : 0.4,
+                  minWidth: '220px',
+                  height: '44px',
+                  fontSize: '0.9rem',
+                  letterSpacing: '0.05em'
                 }}
               >
-                {needsClarification ? '🔒 Locked' : 'Generate Candidates →'}
+                {needsClarification ? '🔒 Locked (Clarify Details)' : '✨ Generate Candidates'}
               </button>
               {needsClarification && (
-                <span style={{ fontSize: '0.7rem', color: 'var(--warning)', maxWidth: '200px', textAlign: 'right', animation: 'fade-in 0.3s ease' }}>
-                  Please clarify: <b>{lowConfidenceTraits[0]}</b>
-                </span>
+                <div style={{ 
+                  background: 'rgba(245, 158, 11, 0.1)', 
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem', 
+                  color: 'var(--warning)', 
+                  animation: 'fadeIn 0.3s ease' 
+                }}>
+                  Required: <b>{lowConfidenceTraits[0]}</b>
+                </div>
               )}
             </div>
           </div>

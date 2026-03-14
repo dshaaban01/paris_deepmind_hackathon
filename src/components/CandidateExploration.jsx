@@ -14,6 +14,7 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
 
   const [refinementInput, setRefinementInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isFallbackActive, setIsFallbackActive] = useState(false);
 
   const traits = data.structuredTraits || {};
   const traitsList = Object.keys(traits);
@@ -58,7 +59,9 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
 
     const generateSingle = async (seedIndex) => {
       try {
-        const parts = [{ text: `${fullPrompt}. Subtle stylistic variant ${seedIndex}.` }];
+        // Inject true entropy into the prompt to force model variation and bypass stability caches
+        const entropy = Math.random().toString(36).substring(7);
+        const parts = [{ text: `${fullPrompt}. Unique Variant ID: ${entropy}. Subtle artistic shift ${seedIndex}.` }];
         
         // Include source image in context if available for true multimodal refinement
         if (data.sourceImage) {
@@ -72,13 +75,15 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
           });
         }
 
+        const seed = Math.floor(Math.random() * 1000000);
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: parts }],
             generationConfig: {
-              responseModalities: ["IMAGE"]
+              responseModalities: ["IMAGE"],
+              seed: seed
             }
           })
         });
@@ -99,12 +104,15 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
     // Parallel fetch 3 variations
     const imgs = await Promise.all([generateSingle(1), generateSingle(2), generateSingle(3)]);
     
+    const isAnyFallback = imgs.some(img => img === null);
+    setIsFallbackActive(isAnyFallback);
+
     const newCands = imgs.map((imgUrl, idx) => ({
       id: `${idx + 1}-${newGenCount}`,
       label: `Generation ${newGenCount}.${idx + 1}`,
       notes: newGenCount > 1 ? `Applied: "${refinements[refinements.length - 1] || 'Refinements'}"` : 'Initial baseline',
       // Fallback securely to a local asset if API key hits quota or fails
-      image: imgUrl || (isFemale ? `/real_f${idx + 1}.png` : `/real_m${idx + 1}.png`),
+      image: imgUrl || (isFemale ? `https://i.pravatar.cc/300?u=fallback-f${idx}-${newGenCount}` : `https://i.pravatar.cc/300?u=fallback-m${idx}-${newGenCount}`),
       filter: 'none'
     }));
     
@@ -151,7 +159,14 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2>Candidate Exploration (Iteration {generationCount})</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 style={{ margin: 0 }}>Candidate Exploration (Iteration {generationCount})</h2>
+            {isFallbackActive && (
+              <span style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold' }}>
+                ⚠️ API OFFLINE / FALLBACK ACTIVE
+              </span>
+            )}
+          </div>
           <p style={{ color: 'var(--text-secondary)' }}>Select the closest match or refine features.</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
@@ -193,25 +208,24 @@ const CandidateExploration = ({ apiKey, advancePhase, returnPhase, data, onDataC
               <p style={{ color: 'var(--text-secondary)' }}>Please enter your Gemini API Key in the top navigation bar to enable "Nano Banana" image generation.</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }}>
               {candidates.map(candidate => (
                 <div 
                   key={candidate.id}
-                  className="glass-panel"
+                  className="glass-panel hover-card"
                   style={{ 
                     cursor: 'pointer',
-                    border: selectedCandidate === candidate.id ? '2px solid var(--primary)' : '1px solid var(--surface-border)',
-                    transform: selectedCandidate === candidate.id ? 'translateY(-4px)' : 'none',
-                    transition: 'all 0.3s ease',
-                    padding: '16px'
+                    border: selectedCandidate === candidate.id ? '2px solid var(--accent-blue)' : '1px solid var(--surface-border)',
+                    background: selectedCandidate === candidate.id ? 'rgba(59, 130, 246, 0.1)' : 'var(--surface-color)',
+                    padding: '20px'
                   }}
                   onClick={() => setSelectedCandidate(candidate.id)}
                 >
-                  <div style={{ width: '100%', aspectRatio: '1/1', background: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
+                  <div style={{ width: '100%', aspectRatio: '1/1', background: '#000', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', boxShadow: '0 8px 16px rgba(0,0,0,0.3)' }}>
                      <img src={candidate.image} alt={candidate.label} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: candidate.filter }} />
                   </div>
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '8px' }}>{candidate.label}</h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{candidate.notes}</p>
+                  <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: '#fff' }}>{candidate.label}</h3>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{candidate.notes}</p>
                 </div>
               ))}
             </div>
