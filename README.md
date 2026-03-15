@@ -1,6 +1,15 @@
-# ShareLock (Paris DeepMind Hackathon)
+# ShareLock
+_Submission to the Gemini 3 Paris Hackathon organized by Cerebral Valley on 14.03.2026 which was awarded 2nd place._
 
-AI-assisted witness interview and suspect sketch exploration built with React + Vite.
+**Problem?** Still in 2026 forensic sketching is used to identify criminals. This process is slow and costly. Humans experts struggle to effectively combine all possible supporting evidence and statements of multiple witnesses.
+
+**Solution?** ShareLock helps combine witness information through interactions with users, collecting both descriptions and reported evidence. It uses Gemini's multimodal reasoning capabilities to synthetize possible candidate faces with Imagen. The witnesses can refine those using selection mechanism and confidence on different features.
+
+![ShareLock Preview](src/assets/preview.png)
+
+**Demonstration** Check out our [video demonstration](https://youtu.be/pvtD1TvSsiA) to see our assistant in action!
+
+# Run the code yourself!
 
 ## 1) Environment setup
 
